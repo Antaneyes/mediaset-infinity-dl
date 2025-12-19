@@ -1,1 +1,0 @@
-This is the folder where the output files will be generated

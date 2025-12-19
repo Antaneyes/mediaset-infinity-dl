@@ -1,86 +1,221 @@
 # Mediaset Infinity Downloader
 
-Mediaset Infinity Downloader is a typescript library to download [Mediaset Infinity](mediasetinfinity.mediaset.it) movies or tv-series.
-It uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) to download the actual episodes.
+Descargador automático de episodios de Mediaset Infinity con desencriptación Widevine L3.
 
-## Installation
+## 🚀 Características
 
-To use mediaset-infinity-downloader, clone this repo and cd into the cloned folder.
-Then you have to install needed packages
+- ✅ Scraping automático de nuevos episodios
+- ✅ Captura de manifiestos MPD (.mpd)
+- ✅ Descarga y desencriptación automática (Widevine L3)
+- ✅ Fusión de vídeo y audio
+- ✅ Integración con Plex
+- ✅ Reintentos automáticos en fallos
+- ✅ Validación de claves de desencriptación
+- ✅ Configuración centralizada con `.env`
 
+## 📋 Requisitos
+
+- **Node.js** 18.12.x (especificado en `package.json`)
+- **FFmpeg** (debe estar en PATH del sistema)
+- **Windows** (para `N_m3u8DL-RE.exe`)
+
+## 🔧 Instalación
+
+1. **Clonar repositorio**
+   ```bash
+   git clone <repository-url>
+   cd mediaset-infinity-downloader
+   ```
+
+2. **Instalar dependencias**
+   ```bash
+   npm install
+   ```
+
+3. **Configurar variables de entorno**
+   ```bash
+   copy .env.example .env
+   ```
+   Editar `.env` con tus valores:
+   - `PLEX_DIR`: Ruta a tu biblioteca de Plex
+   - `SERIES_NAME`: Nombre de la serie
+   - `SERIES_SEASON`: Número de temporada
+   - `SERIES_URL`: URL de la página de episodios
+
+4. **Añadir claves de desencriptación**
+   
+   Editar `keys.txt` con las claves Widevine (una por línea):
+   ```
+   KID1:KEY1
+   KID2:KEY2
+   KID3:KEY3
+   ```
+   > ⚠️ **Importante**: La línea N corresponde al episodio N. Dejar líneas vacías para episodios sin clave.
+
+## 🎬 Uso
+
+### Proceso Completo Automático
 ```bash
-# Install typescript runner
-npm install --global ts-node
+npm start
+```
+Ejecuta todo el flujo: scraping → captura → descarga → desencriptación → Plex
 
-# Install project packages
-npm install
+### Solo Buscar Nuevos Episodios
+```bash
+npm run monitor
+```
+Genera `monitor_results.json` con la lista de episodios disponibles.
+
+### Limpiar Logs del Descargador
+```bash
+npm run clean-logs
+```
+Elimina logs acumulados en `src/executables/Logs/`.
+
+## 📁 Estructura del Proyecto
+
+```
+mediaset-infinity-downloader/
+├── src/
+│   ├── autobot.ts          # Orquestador principal
+│   ├── extractor.ts        # Captura de manifiestos MPD
+│   ├── monitor.ts          # Scraping de episodios
+│   ├── config.ts           # Configuración centralizada
+│   ├── utils/
+│   │   ├── retry.ts        # Sistema de reintentos
+│   │   ├── keyValidator.ts # Validación de claves
+│   │   └── logger.ts       # Logging estructurado
+│   └── executables/
+│       └── N_m3u8DL-RE.exe # Descargador de streams
+├── .env                    # Configuración (no versionado)
+├── .env.example            # Plantilla de configuración
+├── keys.txt                # Claves de desencriptación
+├── downloads/              # Descargas temporales
+├── temp/                   # Archivos .bat temporales
+└── browser_profile/        # Perfil de Chrome (cookies, sesiones)
 ```
 
-## Setup
-1. Make ```yt-dlp``` accessible to the script:
-    1. Download the executable (for your machine)
-    2. Put the executable into the folder ```src/executables```
-2. Tweak your ```src/user/config.ts``` file making sure the ```ytDlpPath``` is correct and the ```outputFolder``` exists.
-3. Fill in your ```src/user/episodes.ts``` with an array of strings containing the episode or movie page. Example below
-    ```typescript
-    export default [
-      'https://mediasetinfinity.mediaset.it/video/terraamara/episodio-243_F311851102010702',
-      'https://mediasetinfinity.mediaset.it/video/terraamara/episodio-242_F311851102010602',
-    ];
-    ```
-## How to use
-```typescript
-# cd into the project folder
-cd mediaset-infinitry-downloader
-# run the script
-npm run start
+## 🔑 Obtener Claves de Desencriptación
+
+### Método Automático: Helper de Firefox
+
+El script incluye un **helper automático** que facilita la captura de claves:
+
+**Flujo automático cuando falta una clave:**
+1. El script detecta que falta la clave para un episodio
+2. **Abre Firefox automáticamente** en el episodio correcto
+3. Muestra instrucciones claras en la consola
+4. Espera a que captures la clave con la extensión
+5. Lees la clave automáticamente de `keys.txt`
+6. Continúa con la descarga
+
+**Proceso manual (dentro del helper):**
+1. Espera a que pasen los anuncios
+2. Activa la extensión **Widevine L3 Decrypter** en Firefox
+3. Copia la clave capturada
+4. Pégala en `keys.txt` en la línea correspondiente al número de episodio
+5. Guarda el archivo
+6. Presiona ENTER en la consola
+
+### Extensión Requerida
+
+Necesitas tener instalada en Firefox:
+- **Widevine L3 Decrypter** (disponible en Firefox Add-ons)
+
+### Formato de la Clave
+
+**Formato:** `KID:KEY`
+- **KID**: 32 caracteres hexadecimales
+- **KEY**: 32 caracteres hexadecimales
+
+**Ejemplo válido:**
 ```
-## Tips And Tricks
-### Customizing files output name
-By default yt-dlp uses the name that the .mp4 you are about to download as the output file name
-I've added in the config a way to programmatically change the output of the file name. Follow steps below to use it
-1. Enable ```customOutputName``` in the src/user/config.ts
-2. Adjust ```customOutputNameFunction``` to output a string that will be automatically be used as the file name for the corresponding element in the array.
-### To gather the list of links there are three ways
-* **Simplest, safest but most time-consuming**
-    1. Open each episode page and copy the link manually.
-    2. Add it to ```episodes.ts``` array surrounded by ticks.
-* **Most prone to fail (if mediasetinfinity changes the page structure) but fastest**
-    1. Scroll to the bottom in the episodes list page
-    2. Open browser console and paste this js ```copy($$('a[href*="/video/"]').map((x)=>x.href))```
-    3. You will find in your clipboard the array of all episodes links
-    4. Paste the episodes array into the ```episodes.ts``` file
-* **Most reliable (requires some expertise)**
-    1. Open an episodes list page (example: https://mediasetinfinity.mediaset.it/fiction/bitterlands/episodi_SE000000001766,ST000000003181,sb100018308)
-    2. Open devtools and go to Network Tab
-    3. Scroll to the bottom of the page
-    4. You will see a new ```type:'fetch'``` request appearing named ```mediaset-prod-all-programs-v2```
-    5. Right click then ```Copy > Copy as fetch```
-    6. Go to Console Tab of the devtools
-    7. Paste the copied fetch (example below)
-        ```javascript
-        fetch("https://feed.entertainment.tv.theplatform.eu/f/PR1GhC/mediaset-prod-all-programs-v2?byCustomValue={subBrandId} 
-        {100018308}&sort=:publishInfo_lastPublished|desc,tvSeasonEpisodeNumber|desc&range=1-1000", {
-        "headers": {
-            "accept": "*/*",
-            "accept-language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-            "sec-ch-ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Google Chrome\";v=\"114\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "cross-site"
-        },
-        "referrer": "https://mediasetinfinity.mediaset.it/",
-        "referrerPolicy": "strict-origin-when-cross-origin",
-        "body": null,
-        "method": "GET",
-        "mode": "cors",
-        "credentials": "omit"
-        });
-        ```
-    8. Modify the ```range``` queryParam to any number you want (in the example above i modified it to 1 to 1000)
-    9. Run the ```fetch``` by pressing enter
-    10. Go back to Network Tab
-    11. Select the request we just did and in the preview tab right click ```entries``` and press ```Copy value```.
-    12. Paste the episodes array into the ```episodes.ts``` file
+2ddeab4e324d42e99503a92e5449e843:9e01fb534f7833b74f330ffdbca7deb2
+```
+
+### Validación Automática
+
+El script incluye validación automática de claves:
+- ✅ Detecta claves duplicadas al inicio
+- ✅ Verifica formato correcto (32 hex:32 hex)
+- ✅ Avisa si hay problemas antes de descargar
+
+> 💡 **Tip**: Las claves se guardan en `keys.txt` donde la línea N corresponde al episodio N. Puedes dejar líneas vacías para episodios sin clave.
+
+### ¿Por qué no funciona con Puppeteer?
+
+Mediaset Infinity detecta navegadores controlados por Puppeteer y bloquea la reproducción DRM (error PLAYBACK-DRM-6001). Por eso usamos Firefox real con el helper automático.
+
+## ⚙️ Configuración Avanzada
+
+### Variables de Entorno (`.env`)
+
+| Variable | Descripción | Por Defecto |
+|----------|-------------|-------------|
+| `PLEX_DIR` | Directorio de destino en Plex | `./output` |
+| `SERIES_NAME` | Nombre de la serie | `La isla de las tentaciones` |
+| `SERIES_SEASON` | Número de temporada | `9` |
+| `SERIES_URL` | URL de episodios de Mediaset | *(requerido)* |
+| `EXTRACTOR_TIMEOUT` | Timeout del extractor (ms) | `600000` (10 min) |
+| `MONITOR_TIMEOUT` | Timeout del monitor (ms) | `60000` (1 min) |
+| `DOWNLOAD_DIR` | Carpeta de descargas | `./downloads` |
+| `TEMP_DIR` | Carpeta temporal | `./temp` |
+| `KEYS_FILE` | Archivo de claves | `./keys.txt` |
+
+## 🐛 Troubleshooting
+
+### Problema: "Failed to download asset"
+**Solución:**
+- Verificar conexión a internet
+- Reintentar con `npm start` (tiene reintentos automáticos)
+- Verificar que FFmpeg está en PATH
+
+### Problema: "Invalid key format"
+**Solución:**
+- Verificar formato `KID:KEY` (32 hex:32 hex)
+- Comprobar que no haya espacios extra
+- Ejecutar el script para detectar duplicados automáticamente
+
+### Problema: "Browser closed by user"
+**Solución:**
+- No cerrar el navegador manualmente
+- Esperar a que el vídeo empiece a reproducirse
+- El navegador se cierra automáticamente al capturar el manifest
+
+### Problema: Mediaset detecta bot
+**Solución:**
+- El script usa técnicas anti-detección (stealth mode)
+- Usar `browser_profile/` para mantener sesión
+- Evitar ejecutar múltiples instancias simultáneas
+
+## 📝 Flujo de Trabajo
+
+1. **Monitor** escanea la página de episodios
+2. **Autobot** lee la lista y procesa cada episodio:
+   - Verifica si ya existe en Plex
+   - Busca clave en `keys.txt` o pregunta manualmente
+   - Lanza **Extractor** para capturar manifest
+   - Descarga streams encriptados con `N_m3u8DL-RE`
+   - Desencripta con FFmpeg
+   - Fusiona vídeo + audio
+   - Mueve a Plex
+
+## 🔒 Seguridad
+
+- ⚠️ **No subir** `.env` ni `keys.txt` al repositorio
+- ⚠️ Las claves Widevine son **sensibles**
+- ⚠️ Usar solo para **contenido que tienes derecho a descargar**
+
+## 📜 Licencia
+
+Apache-2.0
+
+## 🙏 Créditos
+
+- [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE) - Descargador de streams
+- [Puppeteer](https://pptr.dev/) - Automatización de navegador
+- [FFmpeg](https://ffmpeg.org/) - Procesamiento multimedia
+
+---
+
+**Nota**: Este proyecto es solo para fines educativos. Respeta los derechos de autor y términos de servicio de Mediaset Infinity.
